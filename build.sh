@@ -1,0 +1,1 @@
+g++ main.cpp CellSqure.cpp -O2 -ogame_of_life
