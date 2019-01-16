@@ -1,2 +1,2 @@
-./build.sh
-./game_of_life
+cd bin && python -m SimpleHTTPServer
+cd ..

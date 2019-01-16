@@ -1,0 +1,54 @@
+<!doctype html>
+
+<html>
+<style>
+	* {
+		margin: 0;
+		padding: 0;
+	}
+
+	html,
+	body {
+		height: 100%;
+		width: 100%;
+	}
+
+	canvas {
+		display: block;
+		background: black;
+	}
+</style>
+
+<body>
+	<canvas id="canvas"></canvas>
+</body>
+
+<script>
+	var Module = {
+		canvas: (function () {
+			var canvas = document.getElementById('canvas');
+			return canvas;
+		})(),
+
+		print: function (text) {
+			console.log(text);
+		},
+	};
+
+	window.onresize = function () {
+		resizeCanvas();
+	}
+
+	window.onload = function () {
+		resizeCanvas();
+	}
+
+	function resizeCanvas() {
+		Module.canvas.width = window.innerWidth;
+		Module.canvas.height = window.innerHeight;
+		Module.oncanvasresize();
+	};
+</script>
+<script src="./index.js"></script>
+
+</html>

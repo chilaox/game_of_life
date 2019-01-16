@@ -1,32 +1,24 @@
 #include <iostream>
 #include <chrono>
-#include <thread>
-#include <stdlib.h>
+#include <emscripten/bind.h>
 
-#include "CellSqure.h"
-
-using namespace std;
+#include "render/gles_render.h"
 
 int main(int argc, const char** argv)
 {
+	using namespace std;
 	srand(chrono::system_clock::now().time_since_epoch().count());
 
-	int sidesize = 10;
-	int msec = 200;
-	
-	if (argc > 1) {
-		sidesize = atoi(argv[1]);
-		if (argc > 2) {
-			msec = atoi(argv[2]);
-		}
-	}
-	
-	auto squre = CellSqure::MakeRandomInstance(sidesize);
+	gles_render::instance().init();
+	gles_render::instance().start();
+}
 
-	while(true){
-		cout<<squre;
-		this_thread::sleep_for(chrono::milliseconds(msec));
-		auto x = system("clear");
-		squre.generation();
-	}
+void oncanvasresize()
+{
+	gles_render::instance().oncanvesresize();
+}
+
+EMSCRIPTEN_BINDINGS(module)
+{
+    emscripten::function("oncanvasresize", &oncanvasresize);
 }
