@@ -42,8 +42,6 @@ void gles_render::init()
 {
     EmscriptenWebGLContextAttributes attrs;
     emscripten_webgl_init_context_attributes(&attrs);
-    attrs.explicitSwapControl = 1;
-    attrs.renderViaOffscreenBackBuffer = 1;
 
     mglcontex = emscripten_webgl_create_context(0, &attrs);
     assert(mglcontex);
@@ -67,6 +65,7 @@ void gles_render::init()
     GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader);
 
     GLuint program = create_program(vs, fs);
+    oncanvesresize();
     glUseProgram(program);
 
     cout << "webgl contex init:" << mglcontex << endl;
@@ -74,14 +73,27 @@ void gles_render::init()
 
 void gles_render::oncanvesresize()
 {
-    int width, height;
-    emscripten_get_canvas_element_size("canvas", &width, &height);
-    glViewport(0, 0, width, height);
+    emscripten_get_canvas_element_size("canvas", &mview_width, &mview_height);
+    cout << mview_width << '\t' << mview_height << endl;
 }
 
 void gles_render::draw()
 {
     cout << "render draw" << endl;
+
+    glViewport(0, 0, mview_width, mview_height);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+}
+
+void cdraw()
+{
+    gles_render::instance().draw();
+}
+
+void gles_render::start()
+{
+    cout << "render start" << endl;
 
     static const float pos_and_color[] = {
         //     x,     y, r, g, b
@@ -102,37 +114,17 @@ void gles_render::draw()
         1,
     };
 
-    // #ifdef DRAW_FROM_CLIENT_MEMORY
-    //     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 20, pos_and_color);
-    //     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 20, (void*)(pos_and_color + 2));
-    // #else
     GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(pos_and_color), pos_and_color, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 20, 0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 20, (void*)8);
-    //#endif
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
-
     glClearColor(0.0f, 0.0f, 0.0f, 1);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    emscripten_webgl_commit_frame();
-}
-
-void cdraw()
-{
-    gles_render::instance().draw();
-}
-
-void gles_render::start()
-{
-    cout << "render start" << endl;
     emscripten_set_main_loop(cdraw, 0, true);
-    //cdraw();
 }
 
 void gles_render::pause()

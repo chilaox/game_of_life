@@ -35,8 +35,14 @@
 		},
 	};
 
+</script>
+
+<script src="./index.js"></script>
+
+<script>
 	window.onresize = function () {
 		resizeCanvas();
+		Module.oncanvasresize();
 	}
 
 	window.onload = function () {
@@ -46,9 +52,7 @@
 	function resizeCanvas() {
 		Module.canvas.width = window.innerWidth;
 		Module.canvas.height = window.innerHeight;
-		Module.oncanvasresize();
 	};
 </script>
-<script src="./index.js"></script>
 
 </html>
