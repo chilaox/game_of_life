@@ -16,6 +16,6 @@ public:
 	void oncanvesresize();
 private:
 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE mglcontex;
-	int mview_width;
-	int mview_height;
+	int mview_width = 0;
+	int mview_height = 0;
 };

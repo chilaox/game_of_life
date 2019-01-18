@@ -1,7 +1,6 @@
 #include "gles_render.h"
 #include <GLES3/gl3.h>
 #include <emscripten.h>
-#include <functional>
 #include <iostream>
 
 using namespace std;
@@ -32,8 +31,6 @@ GLuint create_program(GLuint vertexShader, GLuint fragmentShader)
     GLuint program = glCreateProgram();
     glAttachShader(program, vertexShader);
     glAttachShader(program, fragmentShader);
-    glBindAttribLocation(program, 0, "apos");
-    glBindAttribLocation(program, 1, "acolor");
     glLinkProgram(program);
     return program;
 }
@@ -42,30 +39,36 @@ void gles_render::init()
 {
     EmscriptenWebGLContextAttributes attrs;
     emscripten_webgl_init_context_attributes(&attrs);
+    attrs.majorVersion = 2;
+    attrs.minorVersion = 0;
 
     mglcontex = emscripten_webgl_create_context(0, &attrs);
     assert(mglcontex);
     auto res = emscripten_webgl_make_context_current(mglcontex);
     assert(res == EMSCRIPTEN_RESULT_SUCCESS);
 
-    static const char vertex_shader[] = "attribute vec4 apos;"
-                                        "attribute vec4 acolor;"
-                                        "varying vec4 color;"
+    static const char vertex_shader[] = "#version 300 es\n"
+                                        "layout (location=0) in vec4 apos;"
+                                        "layout (location=1) in vec4 acolor;"
+                                        "out vec4 color;"
                                         "void main() {"
                                         "color = acolor;"
                                         "gl_Position = apos;"
                                         "}";
+
     GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader);
 
-    static const char fragment_shader[] = "precision lowp float;"
-                                          "varying vec4 color;"
+    static const char fragment_shader[] = "#version 300 es\n"
+                                          "precision lowp float;"
+                                          "in vec4 color;"
+                                          "out vec4 frcolor;"
                                           "void main() {"
-                                          "gl_FragColor = color;"
+                                          "frcolor = color;"
                                           "}";
+
     GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader);
 
     GLuint program = create_program(vs, fs);
-    oncanvesresize();
     glUseProgram(program);
 
     cout << "webgl contex init:" << mglcontex << endl;
@@ -73,15 +76,13 @@ void gles_render::init()
 
 void gles_render::oncanvesresize()
 {
-    emscripten_get_canvas_element_size("canvas", &mview_width, &mview_height);
-    cout << mview_width << '\t' << mview_height << endl;
 }
 
 void gles_render::draw()
 {
-    cout << "render draw" << endl;
-
+    emscripten_get_canvas_element_size("canvas", &mview_width, &mview_height);
     glViewport(0, 0, mview_width, mview_height);
+    
     glClear(GL_COLOR_BUFFER_BIT);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
