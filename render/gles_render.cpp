@@ -47,30 +47,6 @@ void gles_render::init()
     auto res = emscripten_webgl_make_context_current(mglcontex);
     assert(res == EMSCRIPTEN_RESULT_SUCCESS);
 
-    static const char vertex_shader[] = "#version 300 es\n"
-                                        "layout (location=0) in vec4 apos;"
-                                        "layout (location=1) in vec4 acolor;"
-                                        "out vec4 color;"
-                                        "void main() {"
-                                        "color = acolor;"
-                                        "gl_Position = apos;"
-                                        "}";
-
-    GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader);
-
-    static const char fragment_shader[] = "#version 300 es\n"
-                                          "precision lowp float;"
-                                          "in vec4 color;"
-                                          "out vec4 frcolor;"
-                                          "void main() {"
-                                          "frcolor = color;"
-                                          "}";
-
-    GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader);
-
-    GLuint program = create_program(vs, fs);
-    glUseProgram(program);
-
     cout << "webgl contex init:" << mglcontex << endl;
 }
 
@@ -82,9 +58,9 @@ void gles_render::draw()
 {
     emscripten_get_canvas_element_size("canvas", &mview_width, &mview_height);
     glViewport(0, 0, mview_width, mview_height);
-    
+
     glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawArrays(GL_LINES, 0, (mside + 1) * msn / 2);
 }
 
 void cdraw()
@@ -94,38 +70,46 @@ void cdraw()
 
 void gles_render::start()
 {
-    cout << "render start" << endl;
+    static const char vertex_shader[] = "#version 300 es\n"
+                                        "layout (location=0) in vec4 apos;"
+                                        "void main() {"
+                                        "gl_Position = apos;"
+                                        "}";
 
-    static const float pos_and_color[] = {
-        //     x,     y, r, g, b
-        -0.6f,
-        -0.6f,
-        1,
-        0,
-        0,
-        0.6f,
-        -0.6f,
-        0,
-        1,
-        0,
-        0.f,
-        0.6f,
-        0,
-        0,
-        1,
-    };
+    GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader);
+
+    static const char fragment_shader[] = "#version 300 es\n"
+                                          "precision highp float;"
+                                          "out vec4 color;"
+                                          "void main() {"
+                                          "color = vec4(0.5, 0.5, 0.5, 1.0);"
+                                          "}";
+
+    GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader);
+
+    GLuint program = create_program(vs, fs);
+    glUseProgram(program);
+
+    const float step = (1 - mmargin) * 2 / mside;
+    static float pos[(mside + 1) * msn];
+
+    for (int i = 0; i <= mside; i++) {
+        pos[msn * i] = pos[msn * i + 5] = -1 + mmargin;
+        pos[msn * i + 1] = pos[msn * i + 3] = pos[msn * i + 4] = pos[msn * i + 6] = -1 + mmargin + i * step;
+        pos[msn * i + 2] = pos[msn * i + 7] = 1 - mmargin;
+    }
 
     GLuint vbo;
     glGenBuffers(1, &vbo);
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(pos_and_color), pos_and_color, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 20, 0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 20, (void*)8);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(pos), pos, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
     glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glClearColor(0.0f, 0.0f, 0.0f, 1);
+    glClearColor(0.1f, 0.1f, 0.1f, 1);
 
     emscripten_set_main_loop(cdraw, 0, true);
+
+    cout << "render start" << endl;
 }
 
 void gles_render::pause()
