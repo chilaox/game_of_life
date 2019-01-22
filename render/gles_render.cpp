@@ -1,5 +1,6 @@
 #include "gles_render.h"
 #include <GLES3/gl3.h>
+#include <assert.h>
 #include <emscripten.h>
 #include <iostream>
 
@@ -54,26 +55,64 @@ void gles_render::oncanvesresize()
 {
 }
 
-void gles_render::draw()
+void gles_render::zoom(bool out)
 {
-    emscripten_get_canvas_element_size("canvas", &mview_width, &mview_height);
-    glViewport(0, 0, mview_width, mview_height);
+    auto diff = moffsetz + mnear;
 
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_LINES, 0, (mside + 1) * msn / 2);
+    if (out) {
+        diff *= 1.1f;
+    } else {
+        diff /= 1.1f;
+    }
+
+    moffsetz = min(max(diff - mnear, mzmin), mzmax);
+
+    cout << "z: " << moffsetz << endl;
 }
 
-void cdraw()
+void gles_render::update()
 {
+    emscripten_get_canvas_element_size("canvas", &mview_width, &mview_height);
+
+    // Generate a model view matrix to rotate/translate the cube
+    esMatrixLoadIdentity(&mmodelview);
+    // Translate away from the viewer
+
+    esTranslate(&mmodelview, 0, 0, moffsetz);
+
+    // Generate a perspective matrix with a 60 degree FOV
+    esMatrixLoadIdentity(&mperspective);
+
+    auto aspect = (float)mview_width / (float)mview_height;
+    esPerspective(&mperspective, 60.0f, aspect, mnear, mfar);
+}
+
+void gles_render::draw()
+{
+    glViewport(0, 0, mview_width, mview_height);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glUniformMatrix4fv(mmvpos, 1, GL_FALSE, (GLfloat*)mmodelview.m);
+    glUniformMatrix4fv(mpepos, 1, GL_FALSE, (GLfloat*)mperspective.m);
+
+    glDrawArrays(GL_LINES, 0, (msidenum + 1) * 4);
+}
+
+void update_frame()
+{
+    gles_render::instance().update();
     gles_render::instance().draw();
 }
 
 void gles_render::start()
 {
     static const char vertex_shader[] = "#version 300 es\n"
-                                        "layout (location=0) in vec4 apos;"
+                                        "uniform mat4 modelview;"
+                                        "uniform mat4 perspective;"
+                                        "layout (location=0) in vec4 pos;"
                                         "void main() {"
-                                        "gl_Position = apos;"
+                                        "gl_PointSize = 0.1f;"
+                                        "gl_Position = perspective * modelview * pos;"
                                         "}";
 
     GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader);
@@ -90,13 +129,17 @@ void gles_render::start()
     GLuint program = create_program(vs, fs);
     glUseProgram(program);
 
-    const float step = (1 - mmargin) * 2 / mside;
-    static float pos[(mside + 1) * msn];
+    mmvpos = glGetUniformLocation(program, "modelview");
+    mpepos = glGetUniformLocation(program, "perspective");
 
-    for (int i = 0; i <= mside; i++) {
-        pos[msn * i] = pos[msn * i + 5] = -1 + mmargin;
-        pos[msn * i + 1] = pos[msn * i + 3] = pos[msn * i + 4] = pos[msn * i + 6] = -1 + mmargin + i * step;
-        pos[msn * i + 2] = pos[msn * i + 7] = 1 - mmargin;
+    float x0 = -msidenum * msidelen / 2;
+    const int idxc = 8;
+    static float pos[(msidenum + 1) * idxc];
+
+    for (int i = 0; i <= msidenum; i++) {
+        pos[idxc * i] = pos[idxc * i + 5] = x0;
+        pos[idxc * i + 1] = pos[idxc * i + 3] = pos[idxc * i + 4] = pos[idxc * i + 6] = x0 + i * msidelen;
+        pos[idxc * i + 2] = pos[idxc * i + 7] = -x0;
     }
 
     GLuint vbo;
@@ -105,11 +148,12 @@ void gles_render::start()
     glBufferData(GL_ARRAY_BUFFER, sizeof(pos), pos, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
     glEnableVertexAttribArray(0);
-    glClearColor(0.1f, 0.1f, 0.1f, 1);
 
-    emscripten_set_main_loop(cdraw, 0, true);
+    glClearColor(0, 0, 0, 0);
 
     cout << "render start" << endl;
+
+    emscripten_set_main_loop(update_frame, 0, true);
 }
 
 void gles_render::pause()

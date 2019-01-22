@@ -1,9 +1,8 @@
-#include <assert.h>
-#include <emscripten/html5.h>
 #include "../singleton.h"
+#include "esUtil.h"
+#include <emscripten/html5.h>
 
-class gles_render : public singleton<gles_render>
-{
+class gles_render : public singleton<gles_render> {
 public:
 	void init();
 
@@ -11,15 +10,31 @@ public:
 
 	void pause();
 
+	void update();
+
 	void draw();
 
 	void oncanvesresize();
+
+	void zoom(bool isout);
+
 private:
 	EMSCRIPTEN_WEBGL_CONTEXT_HANDLE mglcontex;
 	int mview_width = 0;
 	int mview_height = 0;
 
-	static constexpr int mside = 50;
-    static constexpr int msn = 8;
-    static constexpr float mmargin = 0.1;
+	float mnear = 1.0f;
+	float mfar = 1000.0f;
+	float mzmax = -mnear - 0.1f;
+	float mzmin = -mfar;
+	float moffsetz = mzmax;
+
+	ESMatrix mperspective;
+	ESMatrix mmodelview;
+
+	GLint mmvpos;
+	GLint mpepos;
+
+	static constexpr float msidelen = 0.1f;
+	static constexpr int msidenum = 1000;
 };
