@@ -96,6 +96,7 @@ void gles_render::draw()
     glUniformMatrix4fv(mpepos, 1, GL_FALSE, (GLfloat*)mperspective.m);
 
     glDrawArrays(GL_LINES, 0, (msidenum + 1) * 4);
+    glDrawArrays(GL_TRIANGLE_FAN,  (msidenum + 1) * 4, mcells.size() / 2);
 }
 
 void update_frame()
@@ -111,7 +112,6 @@ void gles_render::start()
                                         "uniform mat4 perspective;"
                                         "layout (location=0) in vec4 pos;"
                                         "void main() {"
-                                        "gl_PointSize = 0.1f;"
                                         "gl_Position = perspective * modelview * pos;"
                                         "}";
 
@@ -133,19 +133,21 @@ void gles_render::start()
     mpepos = glGetUniformLocation(program, "perspective");
 
     float x0 = -msidenum * msidelen / 2;
-    const int idxc = 8;
-    static float pos[(msidenum + 1) * idxc];
 
     for (int i = 0; i <= msidenum; i++) {
-        pos[idxc * i] = pos[idxc * i + 5] = x0;
-        pos[idxc * i + 1] = pos[idxc * i + 3] = pos[idxc * i + 4] = pos[idxc * i + 6] = x0 + i * msidelen;
-        pos[idxc * i + 2] = pos[idxc * i + 7] = -x0;
+        mlines[midxc * i] = mlines[midxc * i + 5] = x0;
+        mlines[midxc * i + 1] = mlines[midxc * i + 3] = mlines[midxc * i + 4] = mlines[midxc * i + 6] = x0 + i * msidelen;
+        mlines[midxc * i + 2] = mlines[midxc * i + 7] = -x0;
     }
 
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(pos), pos, GL_STATIC_DRAW);
+    mcells = { 0.0f, 0.0f, 0.0f, 0.1f, 0.1f, 0.1f, 0.1f, 0.0f};
+
+    GLuint vbol;
+    glGenBuffers(1, &vbol);
+    glBindBuffer(GL_ARRAY_BUFFER, vbol);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(mlines) + mcells.size() * sizeof(float), nullptr, GL_STATIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(mlines), mlines);
+    glBufferSubData(GL_ARRAY_BUFFER, sizeof(mlines), mcells.size() * sizeof(float), mcells.data());
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
     glEnableVertexAttribArray(0);
 

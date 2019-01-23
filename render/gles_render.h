@@ -1,6 +1,7 @@
 #include "../singleton.h"
 #include "esUtil.h"
 #include <emscripten/html5.h>
+#include <vector>
 
 class gles_render : public singleton<gles_render> {
 public:
@@ -36,5 +37,8 @@ private:
 	GLint mpepos;
 
 	static constexpr float msidelen = 0.1f;
-	static constexpr int msidenum = 1000;
+	static constexpr int msidenum = 10;
+	static constexpr int midxc = 8;
+    float mlines[(msidenum + 1) * midxc];
+	std::vector<float> mcells;
 };
