@@ -1,9 +1,9 @@
 #include <map>
-#include "CellSqure.h"
+#include "cell_squre.h"
 
 using namespace std;
 
-void CellSqure::generation()
+void cell_squre::generation()
 {
 	static const int min = 2;
 	static const int max = 3;
@@ -25,9 +25,9 @@ void CellSqure::generation()
 	}
 }
 
-CellSqure CellSqure::MakeRandomInstance(int side_size)
+cell_squre cell_squre::MakeRandomInstance(int side_size)
 {
-	CellSqure squre(side_size);
+	cell_squre squre(side_size);
 
 	for(auto& row : squre.mcells){
 		for(auto& cell : row){
@@ -38,10 +38,10 @@ CellSqure CellSqure::MakeRandomInstance(int side_size)
 	return squre;
 }
 
-CellSqure::CellSqure(int side_size)
+cell_squre::cell_squre(int side_size)
 	:mside_size(side_size)
 {
-	mcells.assign(side_size, vector<Cell>());
+	mcells.assign(side_size, vector<cell>());
 	for(int i = 0; i < side_size; ++i){
 		auto& row = mcells[i];
 		for(int j = 0; j < side_size; ++j){
@@ -60,7 +60,7 @@ CellSqure::CellSqure(int side_size)
 	}
 }
 
-std::ostream& operator<<(std::ostream& out, const CellSqure& squre)
+std::ostream& operator<<(std::ostream& out, const cell_squre& squre)
 {
 	for(auto& row : squre.mcells){
 		for(auto& cell : row){
@@ -71,23 +71,23 @@ std::ostream& operator<<(std::ostream& out, const CellSqure& squre)
 	return out;
 }
 
-const char Cell::solid[] = "■";
-const char Cell::hollow[] = "□";
+const char cell::solid[] = "■";
+const char cell::hollow[] = "□";
 
-Cell::Cell(int x, int y)
+cell::cell(int x, int y)
 	:mx(x), my(y)
 {
 }
 
 
-Cell& Cell::operator=(bool alive)
+cell& cell::operator=(bool alive)
 {
 	this->malive = alive;
 	return *this;
 }
 
-std::ostream& operator<<(std::ostream& out, const Cell& cell)
+std::ostream& operator<<(std::ostream& out, const cell& cell)
 {
-	out<<(cell.malive?Cell::solid:Cell::hollow);
+	out<<(cell.malive?cell::solid:cell::hollow);
 	return out;
 }
