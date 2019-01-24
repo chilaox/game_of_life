@@ -92,11 +92,13 @@ void gles_render::draw()
     glViewport(0, 0, mview_width, mview_height);
     glClear(GL_COLOR_BUFFER_BIT);
 
+	//mvp matrix
     glUniformMatrix4fv(mmvpos, 1, GL_FALSE, (GLfloat*)mmodelview.m);
     glUniformMatrix4fv(mpepos, 1, GL_FALSE, (GLfloat*)mperspective.m);
 
-    glDrawArrays(GL_LINES, 0, (msidenum + 1) * 4);
-    glDrawArrays(GL_TRIANGLE_FAN,  (msidenum + 1) * 4, mcells.size() / 2);
+	//draw lines
+    glVertexAttrib4f(1, 0.3, 0.3, 0.3, 1);
+    glDrawElements(GL_LINES, sizeof(mlines) / sizeof(int), GL_UNSIGNED_INT, 0);
 }
 
 void update_frame()
@@ -110,18 +112,22 @@ void gles_render::start()
     static const char vertex_shader[] = "#version 300 es\n"
                                         "uniform mat4 modelview;"
                                         "uniform mat4 perspective;"
-                                        "layout (location=0) in vec4 pos;"
+                                        "layout (location=0) in vec4 apos;"
+                                        "layout (location=1) in vec3 acolor;"
+                                        "out vec3 vcolor;"
                                         "void main() {"
-                                        "gl_Position = perspective * modelview * pos;"
+                                        "gl_Position = perspective * modelview * apos;"
+                                        "vcolor = acolor;"
                                         "}";
 
     GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader);
 
     static const char fragment_shader[] = "#version 300 es\n"
                                           "precision highp float;"
+                                          "in vec3 vcolor;"
                                           "out vec4 color;"
                                           "void main() {"
-                                          "color = vec4(0.5, 0.5, 0.5, 1.0);"
+                                          "color = vec4(vcolor, 1.0);"
                                           "}";
 
     GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader);
@@ -132,24 +138,39 @@ void gles_render::start()
     mmvpos = glGetUniformLocation(program, "modelview");
     mpepos = glGetUniformLocation(program, "perspective");
 
-    float x0 = -msidenum * msidelen / 2;
-
-    for (int i = 0; i <= msidenum; i++) {
-        mlines[midxc * i] = mlines[midxc * i + 5] = x0;
-        mlines[midxc * i + 1] = mlines[midxc * i + 3] = mlines[midxc * i + 4] = mlines[midxc * i + 6] = x0 + i * msidelen;
-        mlines[midxc * i + 2] = mlines[midxc * i + 7] = -x0;
+    //init pos
+    auto idx = mpos;
+    for (int x = 0; x <= msidenum; x++) {
+        auto xp = msidelen * ((float)x - (float)msidenum / 2);
+        auto yp = -msidelen * msidenum / 2;
+        for (int y = 0; y <= msidenum; y++) {
+            *idx++ = xp;
+            *idx++ = yp;
+            yp += msidelen;
+        }
     }
 
-    mcells = { 0.0f, 0.0f, 0.0f, 0.1f, 0.1f, 0.1f, 0.1f, 0.0f};
+    //line indices
+    for (int i = 0; i <= msidenum; i++) {
+        auto idx = i * 4;
+        mlines[idx] = i;
+        mlines[idx + 1] = msidenum * (msidenum + 1) + i;
+        mlines[idx + 2] = i * msidenum + i;
+        mlines[idx + 3] = i * msidenum + i + msidenum;
+    }
 
-    GLuint vbol;
-    glGenBuffers(1, &vbol);
-    glBindBuffer(GL_ARRAY_BUFFER, vbol);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(mlines) + mcells.size() * sizeof(float), nullptr, GL_STATIC_DRAW);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(mlines), mlines);
-    glBufferSubData(GL_ARRAY_BUFFER, sizeof(mlines), mcells.size() * sizeof(float), mcells.data());
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+    auto possize = sizeof(mpos);
+    auto linesize = sizeof(mlines);
+
+    glGenBuffers(1, &mposvbo);
+    glBindBuffer(GL_ARRAY_BUFFER, mposvbo);
+    glBufferData(GL_ARRAY_BUFFER, possize, mpos, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, mversize, GL_FLOAT, GL_FALSE, 0, 0);
     glEnableVertexAttribArray(0);
+
+    glGenBuffers(1, &mlineibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mlineibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, linesize, mlines, GL_STATIC_DRAW);
 
     glClearColor(0, 0, 0, 0);
 
