@@ -38,6 +38,7 @@ GLuint create_program(GLuint vertexShader, GLuint fragmentShader)
 
 void gles_render::init()
 {
+    //init context
     EmscriptenWebGLContextAttributes attrs;
     emscripten_webgl_init_context_attributes(&attrs);
     attrs.majorVersion = 2;
@@ -48,67 +49,7 @@ void gles_render::init()
     auto res = emscripten_webgl_make_context_current(mglcontex);
     assert(res == EMSCRIPTEN_RESULT_SUCCESS);
 
-    cout << "webgl contex init:" << mglcontex << endl;
-}
-
-void gles_render::oncanvesresize()
-{
-}
-
-void gles_render::zoom(bool out)
-{
-    auto diff = moffsetz + mnear;
-
-    if (out) {
-        diff *= 1.1f;
-    } else {
-        diff /= 1.1f;
-    }
-
-    moffsetz = min(max(diff - mnear, mzmin), mzmax);
-
-    cout << "z: " << moffsetz << endl;
-}
-
-void gles_render::update()
-{
-    emscripten_get_canvas_element_size("canvas", &mview_width, &mview_height);
-
-    // Generate a model view matrix to rotate/translate the cube
-    esMatrixLoadIdentity(&mmodelview);
-    // Translate away from the viewer
-
-    esTranslate(&mmodelview, 0, 0, moffsetz);
-
-    // Generate a perspective matrix with a 60 degree FOV
-    esMatrixLoadIdentity(&mperspective);
-
-    auto aspect = (float)mview_width / (float)mview_height;
-    esPerspective(&mperspective, 60.0f, aspect, mnear, mfar);
-}
-
-void gles_render::draw()
-{
-    glViewport(0, 0, mview_width, mview_height);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-	//mvp matrix
-    glUniformMatrix4fv(mmvpos, 1, GL_FALSE, (GLfloat*)mmodelview.m);
-    glUniformMatrix4fv(mpepos, 1, GL_FALSE, (GLfloat*)mperspective.m);
-
-	//draw lines
-    glVertexAttrib4f(1, 0.3, 0.3, 0.3, 1);
-    glDrawElements(GL_LINES, sizeof(mlines) / sizeof(int), GL_UNSIGNED_INT, 0);
-}
-
-void update_frame()
-{
-    gles_render::instance().update();
-    gles_render::instance().draw();
-}
-
-void gles_render::start()
-{
+    //link program
     static const char vertex_shader[] = "#version 300 es\n"
                                         "uniform mat4 modelview;"
                                         "uniform mat4 perspective;"
@@ -159,6 +100,7 @@ void gles_render::start()
         mlines[idx + 3] = i * msidenum + i + msidenum;
     }
 
+    //init vbos
     auto possize = sizeof(mpos);
     auto linesize = sizeof(mlines);
 
@@ -174,12 +116,68 @@ void gles_render::start()
 
     glClearColor(0, 0, 0, 0);
 
-    cout << "render start" << endl;
+    //init mvp
+    update_model();
+    update_perspective();
 
-    emscripten_set_main_loop(update_frame, 0, true);
+    cout << "glrender init" << endl;
 }
 
-void gles_render::pause()
+void gles_render::zoom(bool out)
 {
-    cout << "render pause" << endl;
+    auto oldz = moffsetz;
+    auto diff = moffsetz + mnear;
+
+    if (out) {
+        diff *= 1.1f;
+    } else {
+        diff /= 1.1f;
+    }
+
+    moffsetz = min(max(diff - mnear, mzmin), mzmax);
+
+    cout << "z:" << moffsetz << endl;
+
+    update_model();
+}
+
+void gles_render::update_view()
+{
+    emscripten_get_canvas_element_size("canvas", &mview_width, &mview_height);
+    cout << "view size:" << mview_width << " " << mview_height << endl;
+
+    update_perspective();
+
+    glViewport(0, 0, mview_width, mview_height);
+}
+
+void gles_render::update_model()
+{
+    esMatrixLoadIdentity(&mmodel);
+    esTranslate(&mmodel, 0, 0, moffsetz);
+    glUniformMatrix4fv(mmvpos, 1, GL_FALSE, (GLfloat*)mmodel.m);
+}
+
+void gles_render::update_perspective()
+{
+    // Generate a perspective matrix with a 60 degree FOV
+    esMatrixLoadIdentity(&mperspective);
+
+    auto aspect = (float)mview_width / (float)mview_height;
+    esPerspective(&mperspective, 60.0f, aspect, mnear, mfar);
+
+    glUniformMatrix4fv(mpepos, 1, GL_FALSE, (GLfloat*)mperspective.m);
+}
+
+void gles_render::update_data()
+{
+}
+
+void gles_render::draw()
+{
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    //draw lines
+    glVertexAttrib4f(1, 0.3, 0.3, 0.3, 1);
+    glDrawElements(GL_LINES, sizeof(mlines) / sizeof(int), GL_UNSIGNED_INT, 0);
 }

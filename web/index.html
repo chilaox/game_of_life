@@ -14,6 +14,8 @@
 	}
 
 	canvas {
+		height: 100%;
+		width: 100%;
 		display: block;
 		background: black;
 	}
@@ -42,17 +44,14 @@
 <script>
 	window.onresize = function () {
 		resizeCanvas();
-		Module.oncanvasresize();
-	}
-
-	window.onload = function () {
-		resizeCanvas();
 	}
 
 	function resizeCanvas() {
-		Module.canvas.width = window.innerWidth;
-		Module.canvas.height = window.innerHeight;
+		Module.canvas.width = Module.canvas.clientWidth;
+		Module.canvas.height = Module.canvas.clientHeight;
 	};
+
+	resizeCanvas();
 </script>
 
 </html>

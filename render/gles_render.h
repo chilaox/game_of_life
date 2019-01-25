@@ -1,4 +1,4 @@
-#include "../singleton.h"
+#include "../utility/singleton.h"
 #include "esUtil.h"
 #include <emscripten/html5.h>
 #include <vector>
@@ -7,11 +7,9 @@ class gles_render : public singleton<gles_render> {
 public:
 	void init();
 
-	void start();
+	void update_data();
 
-	void pause();
-
-	void update();
+	void update_view();
 
 	void draw();
 
@@ -31,7 +29,7 @@ private:
 	float moffsetz = mzmax;
 
 	ESMatrix mperspective;
-	ESMatrix mmodelview;
+	ESMatrix mmodel;
 
 	GLint mmvpos;
 	GLint mpepos;
@@ -47,4 +45,7 @@ private:
 	float mpos[mposnum * mversize];
     int mlines[mversize * (msidenum + 1) * 2];
 	std::vector<int> mcells;
+
+	void update_model();
+	void update_perspective();
 };
