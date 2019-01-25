@@ -31,6 +31,8 @@ public:
 
     const std::vector<int>& generation();
 
+    cell_squre(){};
+
 private:
     cell_squre(int side_size);
 

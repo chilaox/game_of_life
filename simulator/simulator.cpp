@@ -12,10 +12,11 @@ EM_BOOL on_canvas_wheel(int eventType, const EmscriptenWheelEvent* wheelEvent, v
 EM_BOOL on_wnd_resize(int eventType, const EmscriptenUiEvent* uiEvent, void*);
 
 auto canvas_name = "canvas";
-auto squre = cell_squre::random_instance(100);
+cell_squre squre;
 
 void simulator::run()
 {
+    squre = cell_squre::random_instance(100);
     gles_render::instance().init();
     gles_render::instance().update_view();
 
