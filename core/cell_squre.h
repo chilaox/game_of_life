@@ -3,39 +3,39 @@
 
 class cell_squre;
 
-class cell
-{
-	public:
-	cell(int x, int y);
-	friend std::ostream& operator<<(std::ostream&, const cell&);
+class cell {
+public:
+    cell(int x, int y);
+    friend std::ostream& operator<<(std::ostream&, const cell&);
 
-	static const char solid[];
-	static const char hollow[];
-	
-	private:
-	cell& operator=(bool alive);
+    static const char solid[];
+    static const char hollow[];
 
-	int mx;
-	int my;
-	bool malive;
-	std::vector<cell*> neighbors;
+private:
+    cell& operator=(bool alive);
 
-	friend cell_squre;
+    int mx;
+    int my;
+    bool malive;
+    bool mwillalive;
+    std::vector<cell*> neighbors;
+
+    friend cell_squre;
 };
 
-class cell_squre
-{
-	public:
-	static cell_squre MakeRandomInstance(int side_size);
+class cell_squre {
+public:
+    static cell_squre random_instance(int side_size);
 
-	friend std::ostream& operator<<(std::ostream&, const cell_squre&);
+    friend std::ostream& operator<<(std::ostream&, const cell_squre&);
 
-	void generation();
+    const std::vector<int>& generation();
 
-	private:
-	cell_squre(int side_size);
+private:
+    cell_squre(int side_size);
 
-	private:
-	std::vector<std::vector<cell>> mcells;
-	int mside_size;
+private:
+    std::vector<std::vector<cell>> mcells;
+    int mside_size;
+    std::vector<int> mliveidx;
 };

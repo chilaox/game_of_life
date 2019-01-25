@@ -114,6 +114,10 @@ void gles_render::init()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mlineibo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, linesize, mlines, GL_STATIC_DRAW);
 
+    glGenBuffers(1, &mliveibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mliveibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, msidenum * msidenum * sizeof(int) * 5, nullptr, GL_DYNAMIC_DRAW);
+
     glClearColor(0, 0, 0, 0);
 
     //init mvp
@@ -169,15 +173,51 @@ void gles_render::update_perspective()
     glUniformMatrix4fv(mpepos, 1, GL_FALSE, (GLfloat*)mperspective.m);
 }
 
-void gles_render::update_data()
+void gles_render::update_data(const vector<int>& liveidx)
 {
+    mlivenum = liveidx.size();
+
+    // mlivenum = 2;
+    // mcells[0] = 0;
+    // mcells[1] = 1;
+    // mcells[2] = 12;
+    // mcells[3] = 11;
+    // mcells[4] = 0xFFFFFFFF;
+
+    // mcells[5] = 12;
+    // mcells[6] = 13;
+    // mcells[7] = 24;
+    // mcells[8] = 23;
+    // mcells[9] = 0xFFFFFFFF;
+
+    int count = 0;
+    for (auto idx : liveidx) {
+        auto i = count * 5;
+        auto sidx = idx + idx / msidenum;
+
+        mcells[i] = sidx;
+        mcells[i + 1] = sidx + 1;
+        mcells[i + 2] = sidx + msidenum + 2;
+        mcells[i + 3] = sidx + msidenum + 1;
+        mcells[i + 4] = 0xFFFFFFFF;
+        count++;
+    }
 }
 
 void gles_render::draw()
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
+    //draw cells
+    if (mlivenum != 0) {
+        glVertexAttrib4f(1, 1, 1, 1, 1);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mliveibo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, mlivenum * 5 * sizeof(int), mcells, GL_DYNAMIC_DRAW);
+        glDrawElements(GL_TRIANGLE_FAN, mlivenum * 5, GL_UNSIGNED_INT, 0);
+    }
+
     //draw lines
     glVertexAttrib4f(1, 0.3, 0.3, 0.3, 1);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mlineibo);
     glDrawElements(GL_LINES, sizeof(mlines) / sizeof(int), GL_UNSIGNED_INT, 0);
 }
