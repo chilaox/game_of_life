@@ -177,19 +177,6 @@ void gles_render::update_data(const vector<int>& liveidx)
 {
     mlivenum = liveidx.size();
 
-    // mlivenum = 2;
-    // mcells[0] = 0;
-    // mcells[1] = 1;
-    // mcells[2] = 12;
-    // mcells[3] = 11;
-    // mcells[4] = 0xFFFFFFFF;
-
-    // mcells[5] = 12;
-    // mcells[6] = 13;
-    // mcells[7] = 24;
-    // mcells[8] = 23;
-    // mcells[9] = 0xFFFFFFFF;
-
     int count = 0;
     for (auto idx : liveidx) {
         auto i = count * 5;

@@ -1,5 +1,5 @@
 #include "simulator.h"
-#include "../core/cell_squre.h"
+#include "../core/universe.h"
 #include "../render/gles_render.h"
 #include <emscripten/bind.h>
 #include <emscripten/emscripten.h>
@@ -12,11 +12,12 @@ EM_BOOL on_canvas_wheel(int eventType, const EmscriptenWheelEvent* wheelEvent, v
 EM_BOOL on_wnd_resize(int eventType, const EmscriptenUiEvent* uiEvent, void*);
 
 auto canvas_name = "canvas";
-cell_squre squre;
 
 void simulator::run()
 {
-    squre = cell_squre::random_instance(100);
+    universe::instance().init();
+    universe::instance().random(1000);
+
     gles_render::instance().init();
     gles_render::instance().update_view();
 
@@ -28,7 +29,7 @@ void simulator::run()
 
 void update_frame()
 {
-    gles_render::instance().update_data(squre.generation());
+    gles_render::instance().update_data(universe::instance().generation());
     gles_render::instance().draw();
 }
 
