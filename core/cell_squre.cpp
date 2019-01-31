@@ -1,91 +1,115 @@
 #include "cell_squre.h"
-#include <map>
-
+#include <algorithm>
+#include <iostream>
 using namespace std;
 
-void cell_squre::set_cell_state(const cell& cell, bool alive)
-{
-    mcells[cell.mx][cell.my] = alive;
-}
-
-const Cells& cell_squre::cells()
-{
-    return mcells;
-}
-
-int cell_squre::get_side_size() const
-{
-    return mside_size;
-}
-
-cell_squre::cell_squre(int side_size)
-    : mside_size(side_size)
-{
-    mcells.assign(side_size, vector<cell>());
-    for (int i = 0; i < side_size; ++i) {
-        auto& row = mcells[i];
-        for (int j = 0; j < side_size; ++j) {
-            row.emplace_back(i, j);
-        }
-    }
-
-    static const int dirs[][2] = { { -1, -1 }, { -1, 0 }, { -1, 1 }, { 0, -1 }, { 0, 1 }, { 1, -1 }, { 1, 0 }, { 1, 1 } };
-
-    for (auto& row : mcells) {
-        for (auto& cell : row) {
-            for (auto& dir : dirs) {
-                cell.mneighbors.push_back(&mcells[(cell.mx + side_size + dir[0]) % side_size][(cell.my + side_size + dir[1]) % side_size]);
-            }
-        }
-    }
-}
-
-std::ostream& operator<<(std::ostream& out, const cell_squre& squre)
-{
-    for (auto& row : squre.mcells) {
-        for (auto& cell : row) {
-            out << cell;
-        }
-        out << endl;
-    }
-    return out;
-}
-
-const char cell::solid[] = "■";
-const char cell::hollow[] = "□";
-
-cell::cell(int x, int y)
+cell_squre::cell_chunk::cell_chunk(int x, int y)
     : mx(x)
     , my(y)
+    , midx(x * chunk_size + y)
 {
+    memset(mnbrs, 0, sizeof(mnbrs));
 }
 
-cell& cell::operator=(bool alive)
+cell_squre::cell_squre()
 {
-    if (malive != alive) {
-        malive = alive;
-        auto num = alive ? 1 : -1;
+    auto root_ptr = make_unique<cell_chunk>(0, 0);
+    mroot = root_ptr.get();
+    mchunkmap[mroot->midx] = move(root_ptr);
+}
 
-        for (auto c : mneighbors) {
-            c->mlivenbr += num;
+void cell_squre::loadrule(const rule_set& birth, const rule_set& survival)
+{
+    static auto count_one = [](chunk_state state) {
+        int count = 0;
+        while (state != 0) {
+            count++;
+            state = state & (state - 1);
         }
+        return count;
+    };
+
+    static auto is_bitn_one = [](chunk_state state, int n) {
+        return (state & (1 << n)) >> n;
+    };
+
+    static const int nodeidx[] = { 0x5, 0x6, 0x9, 0xA };
+
+    for (int cs = 0; cs <= chunk_state_max; cs++) {
+        auto ca = count_one(cs);
+        auto c0 = is_bitn_one(cs, 0x0);
+        auto c3 = is_bitn_one(cs, 0x3);
+        auto cC = is_bitn_one(cs, 0xC);
+        auto cF = is_bitn_one(cs, 0xF);
+        auto s0123 = count_one(cs & 0x000F);
+        auto s048C = count_one(cs & 0x1111);
+        auto s37BF = count_one(cs & 0x8888);
+        auto sCDEF = count_one(cs & 0xF000);
+
+        int live[node_size] = {
+            ca + cF - s37BF - sCDEF - is_bitn_one(cs, nodeidx[0]),
+            ca + cC - s048C - sCDEF - is_bitn_one(cs, nodeidx[1]),
+            ca + c3 - s0123 - s37BF - is_bitn_one(cs, nodeidx[2]),
+            ca + c0 - s0123 - s048C - is_bitn_one(cs, nodeidx[3]),
+        };
+
+        node_state ns = cs;
+        for (int i = 0; i < node_size; i++) {
+            auto num = live[i];
+            if (find(birth.begin(), birth.end(), num) != birth.end()) {
+                ns |= (1 << nodeidx[i]);
+            } else if (find(survival.begin(), survival.end(), num) == survival.end()) {
+                ns &= (chunk_state_max - (1 << nodeidx[i]));
+            }
+        }
+        mrule_lookup[cs] = ns;
     }
-
-    return *this;
 }
 
-std::ostream& operator<<(std::ostream& out, const cell& cell)
+void cell_squre::random()
 {
-    out << (cell.malive ? cell::solid : cell::hollow);
-    return out;
+    for_each_chunk([](cmitor it) {
+        it->second->mfront_cells = rand();
+    });
 }
 
-int cell::get_livenbr() const
+void cell_squre::generation()
 {
-    return mlivenbr;
+    for_each_chunk([&](cmitor it) {
+        it->second->mback_cells = mrule_lookup[it->second->mfront_cells];
+    });
+
+    for_each_chunk([](cmitor it) {
+        it->second->mfront_cells = it->second->mback_cells;
+    });
 }
 
-bool cell::isalive() const
+void cell_squre::get_live_cell(vector<int>& cells) const
 {
-    return malive;
+    cells.clear();
+    for_each_chunk([&cells](const_cmitor it) {
+        auto idx = it->first;
+        auto state = it->second->mfront_cells;
+        for (int i = 0; i < chunk_size; i++) {
+            if (state & (1 << i)) {
+                cells.push_back(idx + i);
+            }
+        }
+    });
+}
+
+template <typename FUNC>
+void cell_squre::for_each_chunk(FUNC f)
+{
+    for (auto itor = mchunkmap.begin(); itor != mchunkmap.end(); itor++) {
+        f(itor);
+    }
+}
+
+template <typename FUNC>
+void cell_squre::for_each_chunk(FUNC f) const
+{
+    for (auto itor = mchunkmap.cbegin(); itor != mchunkmap.cend(); itor++) {
+        f(itor);
+    }
 }

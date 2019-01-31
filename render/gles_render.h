@@ -26,7 +26,7 @@ private:
     float mfar = 100.0f;
     float mzmax = -mnear - 0.1f;
     float mzmin = -mfar;
-    float moffsetz = -msidenum * msidelen;
+    float moffsetz = mzmax;
 
     ESMatrix mperspective;
     ESMatrix mmodel;
@@ -38,7 +38,7 @@ private:
     GLuint mliveibo;
 
     static constexpr float msidelen = 0.1f;
-    static constexpr int msidenum = 1000;
+    static constexpr int msidenum = 4;
     static constexpr int mvpl = 4;
     static constexpr int mversize = 2;
     static constexpr int mstride = sizeof(float) * mversize;

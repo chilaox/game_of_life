@@ -10,8 +10,6 @@ public:
     const std::vector<int>& generation();
 
 private:
-    cell_squre msqures[2];
-    cell_squre* mpfront_squre;
-    cell_squre* mpback_squre;
     std::vector<int> mliveidx;
+    cell_squre msqure;
 };
