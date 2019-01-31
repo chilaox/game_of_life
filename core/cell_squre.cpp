@@ -8,7 +8,6 @@ cell_squre::cell_chunk::cell_chunk(int x, int y)
     , my(y)
     , midx(x * chunk_size + y)
 {
-    memset(mnbrs, 0, sizeof(mnbrs));
 }
 
 cell_squre::cell_squre()
@@ -62,7 +61,7 @@ void cell_squre::loadrule(const rule_set& birth, const rule_set& survival)
                 ns &= (chunk_state_max - (1 << nodeidx[i]));
             }
         }
-        mrule_lookup[cs] = ns;
+        mrule_lookup[cs] = ns & 0x660;
     }
 }
 
@@ -76,7 +75,66 @@ void cell_squre::random()
 void cell_squre::generation()
 {
     for_each_chunk([&](cmitor it) {
-        it->second->mback_cells = mrule_lookup[it->second->mfront_cells];
+        auto ck = it->second.get();
+        auto cstate = ck->mfront_cells;
+
+        //topleft node
+        chunk_state tpstate = (cstate & 0x0777) << 0x5;
+        if (ck->wnbr) {
+            tpstate |= ((ck->wnbr->mfront_cells & 0x0888) << 0x1);
+        }
+        if (ck->nnbr) {
+            tpstate |= ((ck->nnbr->mfront_cells & 0x7000) >> 0xB);
+        }
+        if (ck->wnnbr) {
+            tpstate |= (ck->wnnbr->mfront_cells >> 0xF);
+        }
+
+        tpstate = mrule_lookup[tpstate];
+
+        //topright node
+        chunk_state trstate = (cstate & 0x0EEE) << 0x3;
+        if (ck->enbr) {
+            trstate |= ((ck->enbr->mfront_cells & 0x0111) << 0x7);
+        }
+        if (ck->ennbr) {
+            trstate |= ((ck->ennbr->mfront_cells & 0x1000) >> 0x9);
+        }
+        if (ck->nnbr) {
+            trstate |= ((ck->nnbr->mfront_cells & 0xE000) >> 0xD);
+        }
+
+        trstate = mrule_lookup[trstate];
+
+        //bottomleft node
+        chunk_state blstate = (cstate & 0x7770) >> 0x3;
+        if (ck->wnbr) {
+            blstate |= ((ck->wnbr->mfront_cells & 0x8880) >> 0x7);
+        }
+        if (ck->wsnbr) {
+            blstate |= ((ck->wsnbr->mfront_cells & 0x0008) << 0x9);
+        }
+        if (ck->snbr) {
+            blstate |= ((ck->snbr->mfront_cells & 0x0007) << 0xD);
+        }
+
+        blstate = mrule_lookup[blstate];
+
+        //bottomright node
+        chunk_state brstate = (cstate & 0xEEE0) >> 0x5;
+        if (ck->enbr) {
+            brstate |= ((ck->enbr->mfront_cells & 0x1110) >> 0x1);
+        }
+        if (ck->snbr) {
+            brstate |= ((ck->snbr->mfront_cells & 0x000E) << 0xB);
+        }
+        if (ck->esnbr) {
+            brstate |= (ck->esnbr->mfront_cells << 0xF);
+        }
+
+        brstate = mrule_lookup[brstate];
+
+        it->second->mback_cells = (tpstate >> 0x5) | (trstate >> 0x3) | (blstate << 0x3) | (brstate << 0x5);
     });
 
     for_each_chunk([](cmitor it) {
