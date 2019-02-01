@@ -1,6 +1,8 @@
 #include <map>
 #include <vector>
 
+using cell_coord = std::pair<int, int>;
+
 class cell_squre {
 public:
     static const int node_size = 4;
@@ -15,9 +17,9 @@ private:
         cell_chunk(int x, int y);
         int mx = 0;
         int my = 0;
-        int midx = 0;
         chunk_state mfront_cells = 0;
         chunk_state mback_cells = 0;
+        cell_coord mcell_coords[chunk_size];
 
         static const int nbr_num = 8;
 
@@ -36,15 +38,19 @@ public:
     void loadrule(const rule_set& birth, const rule_set& survival);
     void random();
     void generation();
-    void get_live_cell(std::vector<int>&) const;
+    void get_live_cell(std::vector<cell_coord>&) const;
 
 private:
-    cell_chunk* mroot = nullptr;
-    node_state mrule_lookup[chunk_state_max + 1];
-    using chunk_map = std::map<int, std::unique_ptr<cell_chunk>>;
+    using chunk_map = std::map<cell_coord, std::unique_ptr<cell_chunk>>;
     using cmitor = chunk_map::iterator;
     using const_cmitor = chunk_map::const_iterator;
+    cell_chunk* mroot = nullptr;
+    node_state mrule_lookup[chunk_state_max + 1];
     chunk_map mchunkmap;
+
+    cell_chunk* create_chunck(int x, int y);
+    cell_chunk* get_chunck(int x, int y);
+    cell_chunk* get_chunck(const cell_coord&);
 
     template <typename FUNC>
     void for_each_chunk(FUNC f);

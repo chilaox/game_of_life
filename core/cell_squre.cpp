@@ -6,15 +6,84 @@ using namespace std;
 cell_squre::cell_chunk::cell_chunk(int x, int y)
     : mx(x)
     , my(y)
-    , midx(x * chunk_size + y)
 {
+    for (auto i = 0; i < chunk_size; i++) {
+        mcell_coords[i] = make_pair(4 * x + i % 4 - 2, 4 * y - i / 4 + 1);
+    }
 }
 
 cell_squre::cell_squre()
 {
-    auto root_ptr = make_unique<cell_chunk>(0, 0);
-    mroot = root_ptr.get();
-    mchunkmap[mroot->midx] = move(root_ptr);
+    mroot = create_chunck(0, 0);
+    for (int x = -125; x <= 125; x++) {
+        for (int y = -125; y <= 125; y++) {
+            create_chunck(x, y);
+        }
+    }
+}
+
+cell_squre::cell_chunk* cell_squre::create_chunck(int x, int y)
+{
+    auto coord = make_pair(x, y);
+    auto chunk = get_chunck(coord);
+
+    if (chunk == nullptr) {
+        auto chunck_ptr = make_unique<cell_chunk>(x, y);
+        chunk = mchunkmap.emplace(coord, move(chunck_ptr)).first->second.get();
+
+        chunk->nnbr = get_chunck(x, y + 1);
+        if (chunk->nnbr != nullptr) {
+            chunk->nnbr->snbr = chunk;
+        }
+
+        chunk->snbr = get_chunck(x, y - 1);
+        if (chunk->snbr != nullptr) {
+            chunk->snbr->nnbr = chunk;
+        }
+
+        chunk->wnbr = get_chunck(x - 1, y);
+        if (chunk->wnbr != nullptr) {
+            chunk->wnbr->enbr = chunk;
+        }
+
+        chunk->enbr = get_chunck(x + 1, y);
+        if (chunk->enbr != nullptr) {
+            chunk->enbr->wnbr = chunk;
+        }
+
+        chunk->wsnbr = get_chunck(x - 1, y - 1);
+        if (chunk->wsnbr != nullptr) {
+            chunk->wsnbr->ennbr = chunk;
+        }
+
+        chunk->ennbr = get_chunck(x + 1, y + 1);
+        if (chunk->ennbr != nullptr) {
+            chunk->ennbr->wsnbr = chunk;
+        }
+
+        chunk->wnnbr = get_chunck(x - 1, y + 1);
+        if (chunk->wnnbr != nullptr) {
+            chunk->wnnbr->esnbr = chunk;
+        }
+
+        chunk->esnbr = get_chunck(x + 1, y - 1);
+        if (chunk->esnbr != nullptr) {
+            chunk->esnbr->esnbr = chunk;
+        }
+    }
+
+    return chunk;
+}
+
+cell_squre::cell_chunk* cell_squre::get_chunck(int x, int y)
+{
+    return get_chunck(make_pair(x, y));
+}
+
+cell_squre::cell_chunk* cell_squre::get_chunck(const cell_coord& coord)
+{
+    auto itor = mchunkmap.find(coord);
+    return (itor != mchunkmap.end()) ? itor->second.get() : nullptr;
 }
 
 void cell_squre::loadrule(const rule_set& birth, const rule_set& survival)
@@ -80,61 +149,54 @@ void cell_squre::generation()
 
         //topleft node
         chunk_state tpstate = (cstate & 0x0777) << 0x5;
+        //topright node
+        chunk_state trstate = (cstate & 0x0EEE) << 0x3;
+        //bottomleft node
+        chunk_state blstate = (cstate & 0x7770) >> 0x3;
+        //bottomright node
+        chunk_state brstate = (cstate & 0xEEE0) >> 0x5;
+
         if (ck->wnbr) {
             tpstate |= ((ck->wnbr->mfront_cells & 0x0888) << 0x1);
+            blstate |= ((ck->wnbr->mfront_cells & 0x8880) >> 0x7);
         }
         if (ck->nnbr) {
             tpstate |= ((ck->nnbr->mfront_cells & 0x7000) >> 0xB);
+            trstate |= ((ck->nnbr->mfront_cells & 0xE000) >> 0xD);
         }
+        if (ck->enbr) {
+            trstate |= ((ck->enbr->mfront_cells & 0x0111) << 0x7);
+            brstate |= ((ck->enbr->mfront_cells & 0x1110) >> 0x1);
+        }
+
+        if (ck->snbr) {
+            blstate |= ((ck->snbr->mfront_cells & 0x0007) << 0xD);
+            brstate |= ((ck->snbr->mfront_cells & 0x000E) << 0xB);
+        }
+
         if (ck->wnnbr) {
             tpstate |= (ck->wnnbr->mfront_cells >> 0xF);
         }
 
-        tpstate = mrule_lookup[tpstate];
-
-        //topright node
-        chunk_state trstate = (cstate & 0x0EEE) << 0x3;
-        if (ck->enbr) {
-            trstate |= ((ck->enbr->mfront_cells & 0x0111) << 0x7);
-        }
         if (ck->ennbr) {
             trstate |= ((ck->ennbr->mfront_cells & 0x1000) >> 0x9);
         }
-        if (ck->nnbr) {
-            trstate |= ((ck->nnbr->mfront_cells & 0xE000) >> 0xD);
-        }
-
-        trstate = mrule_lookup[trstate];
-
-        //bottomleft node
-        chunk_state blstate = (cstate & 0x7770) >> 0x3;
-        if (ck->wnbr) {
-            blstate |= ((ck->wnbr->mfront_cells & 0x8880) >> 0x7);
-        }
         if (ck->wsnbr) {
             blstate |= ((ck->wsnbr->mfront_cells & 0x0008) << 0x9);
-        }
-        if (ck->snbr) {
-            blstate |= ((ck->snbr->mfront_cells & 0x0007) << 0xD);
-        }
-
-        blstate = mrule_lookup[blstate];
-
-        //bottomright node
-        chunk_state brstate = (cstate & 0xEEE0) >> 0x5;
-        if (ck->enbr) {
-            brstate |= ((ck->enbr->mfront_cells & 0x1110) >> 0x1);
-        }
-        if (ck->snbr) {
-            brstate |= ((ck->snbr->mfront_cells & 0x000E) << 0xB);
         }
         if (ck->esnbr) {
             brstate |= (ck->esnbr->mfront_cells << 0xF);
         }
 
-        brstate = mrule_lookup[brstate];
+        tpstate = mrule_lookup[tpstate] >> 0x5;
 
-        it->second->mback_cells = (tpstate >> 0x5) | (trstate >> 0x3) | (blstate << 0x3) | (brstate << 0x5);
+        trstate = mrule_lookup[trstate] >> 0x3;
+
+        blstate = mrule_lookup[blstate] << 0x3;
+
+        brstate = mrule_lookup[brstate] << 0x5;
+
+        it->second->mback_cells = (tpstate | trstate | blstate | brstate);
     });
 
     for_each_chunk([](cmitor it) {
@@ -142,15 +204,14 @@ void cell_squre::generation()
     });
 }
 
-void cell_squre::get_live_cell(vector<int>& cells) const
+void cell_squre::get_live_cell(vector<cell_coord>& cells) const
 {
     cells.clear();
     for_each_chunk([&cells](const_cmitor it) {
-        auto idx = it->first;
         auto state = it->second->mfront_cells;
         for (int i = 0; i < chunk_size; i++) {
             if (state & (1 << i)) {
-                cells.push_back(idx + i);
+                cells.push_back(it->second->mcell_coords[i]);
             }
         }
     });

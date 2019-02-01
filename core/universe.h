@@ -11,5 +11,6 @@ public:
 
 private:
     std::vector<int> mliveidx;
+    std::vector<cell_coord> mlivecoord;
     cell_squre msqure;
 };

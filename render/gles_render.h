@@ -38,7 +38,7 @@ private:
     GLuint mliveibo;
 
     static constexpr float msidelen = 0.1f;
-    static constexpr int msidenum = 4;
+    static constexpr int msidenum = 1004;
     static constexpr int mvpl = 4;
     static constexpr int mversize = 2;
     static constexpr int mstride = sizeof(float) * mversize;

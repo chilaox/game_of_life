@@ -204,7 +204,7 @@ void gles_render::draw()
     }
 
     //draw lines
-    glVertexAttrib4f(1, 0.3, 0.3, 0.3, 1);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mlineibo);
-    glDrawElements(GL_LINES, sizeof(mlines) / sizeof(int), GL_UNSIGNED_INT, 0);
+    // glVertexAttrib4f(1, 0.3, 0.3, 0.3, 1);
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mlineibo);
+    // glDrawElements(GL_LINES, sizeof(mlines) / sizeof(int), GL_UNSIGNED_INT, 0);
 }
