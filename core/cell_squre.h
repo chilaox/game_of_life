@@ -13,6 +13,14 @@ public:
     using rule_set = std::vector<int>;
 
 private:
+    static const int nbr_num = 8;
+    static constexpr cell_coord nbr_coord[] = {
+        { -1, -1 }, { -1, 0 }, { -1, 1 }, //ws,w,wn
+        { 0, -1 }, { 0, 1 }, //s,n
+        { 1, -1 }, { 1, 0 }, { 1, 1 } //es,e,en
+    };
+    static constexpr int nbr_pair[] = { 7, 6, 5, 4, 3, 2, 1, 0 };
+
     struct cell_chunk {
         cell_chunk(int x, int y);
         int mx = 0;
@@ -20,17 +28,7 @@ private:
         chunk_state mfront_cells = 0;
         chunk_state mback_cells = 0;
         cell_coord mcell_coords[chunk_size];
-
-        static const int nbr_num = 8;
-
-        cell_chunk* enbr = nullptr;
-        cell_chunk* snbr = nullptr;
-        cell_chunk* wnbr = nullptr;
-        cell_chunk* nnbr = nullptr;
-        cell_chunk* esnbr = nullptr;
-        cell_chunk* wsnbr = nullptr;
-        cell_chunk* wnnbr = nullptr;
-        cell_chunk* ennbr = nullptr;
+        cell_chunk* mnbrs[nbr_num];
     };
 
 public:

@@ -7,6 +7,7 @@ cell_squre::cell_chunk::cell_chunk(int x, int y)
     : mx(x)
     , my(y)
 {
+    memset(mnbrs, 0, sizeof(mnbrs));
     for (auto i = 0; i < chunk_size; i++) {
         mcell_coords[i] = make_pair(4 * x + i % 4 - 2, 4 * y - i / 4 + 1);
     }
@@ -31,44 +32,13 @@ cell_squre::cell_chunk* cell_squre::create_chunck(int x, int y)
         auto chunck_ptr = make_unique<cell_chunk>(x, y);
         chunk = mchunkmap.emplace(coord, move(chunck_ptr)).first->second.get();
 
-        chunk->nnbr = get_chunck(x, y + 1);
-        if (chunk->nnbr != nullptr) {
-            chunk->nnbr->snbr = chunk;
-        }
-
-        chunk->snbr = get_chunck(x, y - 1);
-        if (chunk->snbr != nullptr) {
-            chunk->snbr->nnbr = chunk;
-        }
-
-        chunk->wnbr = get_chunck(x - 1, y);
-        if (chunk->wnbr != nullptr) {
-            chunk->wnbr->enbr = chunk;
-        }
-
-        chunk->enbr = get_chunck(x + 1, y);
-        if (chunk->enbr != nullptr) {
-            chunk->enbr->wnbr = chunk;
-        }
-
-        chunk->wsnbr = get_chunck(x - 1, y - 1);
-        if (chunk->wsnbr != nullptr) {
-            chunk->wsnbr->ennbr = chunk;
-        }
-
-        chunk->ennbr = get_chunck(x + 1, y + 1);
-        if (chunk->ennbr != nullptr) {
-            chunk->ennbr->wsnbr = chunk;
-        }
-
-        chunk->wnnbr = get_chunck(x - 1, y + 1);
-        if (chunk->wnnbr != nullptr) {
-            chunk->wnnbr->esnbr = chunk;
-        }
-
-        chunk->esnbr = get_chunck(x + 1, y - 1);
-        if (chunk->esnbr != nullptr) {
-            chunk->esnbr->esnbr = chunk;
+        for (int i = 0; i < nbr_num; i++) {
+            auto& nc = nbr_coord[i];
+            auto nbr = get_chunck(x + nc.first, y + nc.second);
+            if (nbr != nullptr) {
+                chunk->mnbrs[i] = nbr;
+                nbr->mnbrs[nbr_pair[i]] = chunk;
+            }
         }
     }
 
@@ -156,44 +126,54 @@ void cell_squre::generation()
         //bottomright node
         chunk_state brstate = (cstate & 0xEEE0) >> 0x5;
 
-        if (ck->wnbr) {
-            tpstate |= ((ck->wnbr->mfront_cells & 0x0888) << 0x1);
-            blstate |= ((ck->wnbr->mfront_cells & 0x8880) >> 0x7);
-        }
-        if (ck->nnbr) {
-            tpstate |= ((ck->nnbr->mfront_cells & 0x7000) >> 0xB);
-            trstate |= ((ck->nnbr->mfront_cells & 0xE000) >> 0xD);
-        }
-        if (ck->enbr) {
-            trstate |= ((ck->enbr->mfront_cells & 0x0111) << 0x7);
-            brstate |= ((ck->enbr->mfront_cells & 0x1110) >> 0x1);
+        auto wsnbr = ck->mnbrs[0];
+        auto wnbr = ck->mnbrs[1];
+        auto wnnbr = ck->mnbrs[2];
+        auto snbr = ck->mnbrs[3];
+        auto nnbr = ck->mnbrs[4];
+        auto esnbr = ck->mnbrs[5];
+        auto enbr = ck->mnbrs[6];
+        auto ennbr = ck->mnbrs[7];
+
+        if (wsnbr) {
+            blstate |= ((wsnbr->mfront_cells & 0x0008) << 0x9);
         }
 
-        if (ck->snbr) {
-            blstate |= ((ck->snbr->mfront_cells & 0x0007) << 0xD);
-            brstate |= ((ck->snbr->mfront_cells & 0x000E) << 0xB);
+        if (wnbr) {
+            tpstate |= ((wnbr->mfront_cells & 0x0888) << 0x1);
+            blstate |= ((wnbr->mfront_cells & 0x8880) >> 0x7);
         }
 
-        if (ck->wnnbr) {
-            tpstate |= (ck->wnnbr->mfront_cells >> 0xF);
+        if (wnnbr) {
+            tpstate |= (wnnbr->mfront_cells >> 0xF);
         }
 
-        if (ck->ennbr) {
-            trstate |= ((ck->ennbr->mfront_cells & 0x1000) >> 0x9);
+        if (snbr) {
+            blstate |= ((snbr->mfront_cells & 0x0007) << 0xD);
+            brstate |= ((snbr->mfront_cells & 0x000E) << 0xB);
         }
-        if (ck->wsnbr) {
-            blstate |= ((ck->wsnbr->mfront_cells & 0x0008) << 0x9);
+
+        if (nnbr) {
+            tpstate |= ((nnbr->mfront_cells & 0x7000) >> 0xB);
+            trstate |= ((nnbr->mfront_cells & 0xE000) >> 0xD);
         }
-        if (ck->esnbr) {
-            brstate |= (ck->esnbr->mfront_cells << 0xF);
+
+        if (esnbr) {
+            brstate |= (esnbr->mfront_cells << 0xF);
+        }
+
+        if (enbr) {
+            trstate |= ((enbr->mfront_cells & 0x0111) << 0x7);
+            brstate |= ((enbr->mfront_cells & 0x1110) >> 0x1);
+        }
+
+        if (ennbr) {
+            trstate |= ((ennbr->mfront_cells & 0x1000) >> 0x9);
         }
 
         tpstate = mrule_lookup[tpstate] >> 0x5;
-
         trstate = mrule_lookup[trstate] >> 0x3;
-
         blstate = mrule_lookup[blstate] << 0x3;
-
         brstate = mrule_lookup[brstate] << 0x5;
 
         it->second->mback_cells = (tpstate | trstate | blstate | brstate);

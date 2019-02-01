@@ -26,7 +26,7 @@ private:
     float mfar = 100.0f;
     float mzmax = -mnear - 0.1f;
     float mzmin = -mfar;
-    float moffsetz = mzmax;
+    float moffsetz = -mfar;
 
     ESMatrix mperspective;
     ESMatrix mmodel;
