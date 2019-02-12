@@ -40,6 +40,8 @@ cell_squre::cell_chunk* cell_squre::create_chunck(int x, int y)
                 nbr->mnbrs[nbr_pair[i]] = chunk;
             }
         }
+
+        mactivelst.push_back(chunk);
     }
 
     return chunk;
@@ -113,8 +115,19 @@ void cell_squre::random()
 
 void cell_squre::generation()
 {
-    for_each_chunk([&](cmitor it) {
-        auto ck = it->second.get();
+    static const chunk_state nbrmask[cell_squre::nbr_num] = {
+        0x1000,
+        0x1111,
+        0x0001,
+        0xF000,
+        0x000F,
+        0x8000,
+        0x8888,
+        0x0008,
+    };
+
+    for (auto itor = mactivelst.begin(); itor != mactivelst.end(); itor++) {
+        auto ck = *itor;
         auto cstate = ck->mfront_cells;
 
         //topleft node
@@ -176,11 +189,26 @@ void cell_squre::generation()
         blstate = mrule_lookup[blstate] << 0x3;
         brstate = mrule_lookup[brstate] << 0x5;
 
-        it->second->mback_cells = (tpstate | trstate | blstate | brstate);
-    });
+        auto newstate = tpstate | trstate | blstate | brstate;
+        auto diffstate = newstate ^ cstate;
+        if (diffstate == 0) {
+            ck->mstable = true;
+            itor = mactivelst.erase(itor);
+        } else if (diffstate & 0xF99F) {
+            for (int i = 0; i < nbr_num; i++) {
+                auto np = ck->mnbrs[i];
+                if (np && np->mstable && (diffstate & nbrmask[i])) {
+                    np->mstable = false;
+                    mactivelst.push_front(np);
+                }
+            }
+        }
+
+        ck->mback_cells = newstate;
+    }
 
     for_each_chunk([](cmitor it) {
-        it->second->mfront_cells = it->second->mback_cells;
+        swap(it->second->mfront_cells, it->second->mback_cells);
     });
 }
 

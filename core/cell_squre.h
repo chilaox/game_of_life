@@ -1,3 +1,4 @@
+#include <list>
 #include <map>
 #include <vector>
 
@@ -29,6 +30,7 @@ private:
         chunk_state mback_cells = 0;
         cell_coord mcell_coords[chunk_size];
         cell_chunk* mnbrs[nbr_num];
+        bool mstable = false;
     };
 
 public:
@@ -45,6 +47,8 @@ private:
     cell_chunk* mroot = nullptr;
     node_state mrule_lookup[chunk_state_max + 1];
     chunk_map mchunkmap;
+
+    std::list<cell_chunk*> mactivelst;
 
     cell_chunk* create_chunck(int x, int y);
     cell_chunk* get_chunck(int x, int y);
