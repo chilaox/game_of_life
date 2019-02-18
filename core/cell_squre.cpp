@@ -190,19 +190,19 @@ void cell_squre::generation()
         brstate = mrule_lookup[brstate] << 0x5;
 
         auto newstate = tpstate | trstate | blstate | brstate;
-        auto diffstate = newstate ^ cstate;
-        if (diffstate == 0) {
-            ck->mstable = true;
-            itor = mactivelst.erase(itor);
-        } else if (diffstate & 0xF99F) {
-            for (int i = 0; i < nbr_num; i++) {
-                auto np = ck->mnbrs[i];
-                if (np && np->mstable && (diffstate & nbrmask[i])) {
-                    np->mstable = false;
-                    mactivelst.push_front(np);
-                }
-            }
-        }
+        // auto diffstate = newstate ^ cstate;
+        // if (diffstate == 0) {
+        //     ck->mstable = true;
+        //     itor = mactivelst.erase(itor);
+        // } else if (diffstate & 0xF99F) {
+        //     for (int i = 0; i < nbr_num; i++) {
+        //         auto np = ck->mnbrs[i];
+        //         if (np && np->mstable && (diffstate & nbrmask[i])) {
+        //             np->mstable = false;
+        //             mactivelst.push_front(np);
+        //         }
+        //     }
+        // }
 
         ck->mback_cells = newstate;
     }
