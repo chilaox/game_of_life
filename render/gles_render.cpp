@@ -53,11 +53,13 @@ void gles_render::init()
     static const char vertex_shader[] = "#version 300 es\n"
                                         "uniform mat4 modelview;"
                                         "uniform mat4 perspective;"
+                                        "uniform vec2 offset;"
                                         "layout (location=0) in vec4 apos;"
                                         "layout (location=1) in vec3 acolor;"
                                         "out vec3 vcolor;"
                                         "void main() {"
-                                        "gl_Position = perspective * modelview * apos;"
+                                        //"gl_Position = (perspective * modelview * apos) + vec4(offset, 0, 0);"
+                                        "gl_Position = apos + vec4(offset, 0, 0);"
                                         "vcolor = acolor;"
                                         "}";
 
@@ -78,6 +80,7 @@ void gles_render::init()
 
     mmvpos = glGetUniformLocation(program, "modelview");
     mpepos = glGetUniformLocation(program, "perspective");
+    moffsetpos = glGetUniformLocation(program, "offset");
 
     //init pos
     auto idx = mpos;
@@ -120,17 +123,18 @@ void gles_render::init()
 
     glClearColor(0, 0, 0, 0);
 
-    //init mvp
-    update_model();
-    update_perspective();
-
     cout << "glrender init" << endl;
+
+    //init mvp
+    update_view();
+    update_model();
+    update_offest();
 }
 
 void gles_render::zoom(bool out)
 {
-    auto oldz = moffsetz;
-    auto diff = moffsetz + mnear;
+    auto oldz = mzoffsetz;
+    auto diff = mzoffsetz + mnear;
 
     if (out) {
         diff *= 1.1f;
@@ -138,11 +142,23 @@ void gles_render::zoom(bool out)
         diff /= 1.1f;
     }
 
-    moffsetz = min(max(diff - mnear, mzmin), mzmax);
+    mzoffsetz = min(max(diff - mnear, mzmin), mzmax);
 
-    cout << "z:" << moffsetz << endl;
+    cout << "z:" << mzoffsetz << endl;
 
     update_model();
+}
+
+void gles_render::move(int x, int y)
+{
+    mscreenoffset[0] += float(x) / mview_width * 2;
+    mscreenoffset[1] += float(y) / mview_height * 2;
+    update_offest();
+}
+
+void gles_render::update_offest()
+{
+    glUniform2fv(moffsetpos, 1, mscreenoffset);
 }
 
 void gles_render::update_view()
@@ -158,7 +174,7 @@ void gles_render::update_view()
 void gles_render::update_model()
 {
     esMatrixLoadIdentity(&mmodel);
-    esTranslate(&mmodel, 0, 0, moffsetz);
+    esTranslate(&mmodel, 0, 0, mzoffsetz);
     glUniformMatrix4fv(mmvpos, 1, GL_FALSE, (GLfloat*)mmodel.m);
 }
 

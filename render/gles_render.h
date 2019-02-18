@@ -16,6 +16,7 @@ public:
     void oncanvesresize();
 
     void zoom(bool isout);
+    void move(int x, int y);
 
 private:
     EMSCRIPTEN_WEBGL_CONTEXT_HANDLE mglcontex;
@@ -26,13 +27,15 @@ private:
     float mfar = 100.0f;
     float mzmax = -mnear - 0.1f;
     float mzmin = -mfar;
-    float moffsetz = -mfar;
+    float mzoffsetz = -mfar;
 
     ESMatrix mperspective;
     ESMatrix mmodel;
+    float mscreenoffset[2] = { 0, 0 };
 
     GLint mmvpos;
     GLint mpepos;
+    GLint moffsetpos;
     GLuint mposvbo;
     GLuint mlineibo;
     GLuint mliveibo;
@@ -51,4 +54,5 @@ private:
 
     void update_model();
     void update_perspective();
+    void update_offest();
 };
