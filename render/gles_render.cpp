@@ -51,16 +51,15 @@ void gles_render::init()
 
     //link program
     static const char vertex_shader[] = "#version 300 es\n"
-                                        "uniform mat4 modelview;"
-                                        "uniform mat4 perspective;"
                                         "uniform vec2 offset;"
-                                        "layout (location=0) in vec4 apos;"
-                                        "layout (location=1) in vec3 acolor;"
+                                        "uniform float aspect;"
+                                        "uniform float scale;"
+                                        "layout (location=0) in vec4 pos;"
+                                        "layout (location=1) in vec3 color;"
                                         "out vec3 vcolor;"
                                         "void main() {"
-                                        //"gl_Position = (perspective * modelview * apos) + vec4(offset, 0, 0);"
-                                        "gl_Position = apos + vec4(offset, 0, 0);"
-                                        "vcolor = acolor;"
+                                        "gl_Position = vec4((vec2(pos.x / aspect, pos.y) + offset) * scale, pos.zw);"
+                                        "vcolor = color;"
                                         "}";
 
     GLuint vs = compile_shader(GL_VERTEX_SHADER, vertex_shader);
@@ -68,9 +67,9 @@ void gles_render::init()
     static const char fragment_shader[] = "#version 300 es\n"
                                           "precision highp float;"
                                           "in vec3 vcolor;"
-                                          "out vec4 color;"
+                                          "out vec4 fcolor;"
                                           "void main() {"
-                                          "color = vec4(vcolor, 1.0);"
+                                          "fcolor = vec4(vcolor, 1.0);"
                                           "}";
 
     GLuint fs = compile_shader(GL_FRAGMENT_SHADER, fragment_shader);
@@ -78,9 +77,9 @@ void gles_render::init()
     GLuint program = create_program(vs, fs);
     glUseProgram(program);
 
-    mmvpos = glGetUniformLocation(program, "modelview");
-    mpepos = glGetUniformLocation(program, "perspective");
-    moffsetpos = glGetUniformLocation(program, "offset");
+    moffset_pos = glGetUniformLocation(program, "offset");
+    maspect_pos = glGetUniformLocation(program, "aspect");
+    mscale_pos = glGetUniformLocation(program, "scale");
 
     //init pos
     auto idx = mpos;
@@ -126,67 +125,61 @@ void gles_render::init()
     cout << "glrender init" << endl;
 
     //init mvp
-    update_view();
     update_model();
     update_offest();
 }
 
+void gles_render::update_lines_visible()
+{
+    mshow_lines = (msidelen * mview_height * mscale) > 8;
+}
+
 void gles_render::zoom(bool out)
 {
-    auto oldz = mzoffsetz;
-    auto diff = mzoffsetz + mnear;
-
     if (out) {
-        diff *= 1.1f;
+        mscale /= 1.1f;
     } else {
-        diff /= 1.1f;
+        mscale *= 1.1f;
     }
 
-    mzoffsetz = min(max(diff - mnear, mzmin), mzmax);
+    mscale = max(min(mscale, mmax_scale), mmin_scale);
 
-    cout << "z:" << mzoffsetz << endl;
+    cout << "scale: " << mscale << endl;
 
     update_model();
+    update_lines_visible();
 }
 
 void gles_render::move(int x, int y)
 {
-    mscreenoffset[0] += float(x) / mview_width * 2;
-    mscreenoffset[1] += float(y) / mview_height * 2;
+    mscreenoffset[0] += (float(x) / mview_width * 2) / mscale;
+    mscreenoffset[1] += (float(y) / mview_height * 2) / mscale;
     update_offest();
 }
 
 void gles_render::update_offest()
 {
-    glUniform2fv(moffsetpos, 1, mscreenoffset);
+    glUniform2fv(moffset_pos, 1, mscreenoffset);
 }
 
-void gles_render::update_view()
+void gles_render::update_view(int width, int height)
 {
-    emscripten_get_canvas_element_size("canvas", &mview_width, &mview_height);
+    mview_width = width;
+    mview_height = height;
     cout << "view size:" << mview_width << " " << mview_height << endl;
 
-    update_perspective();
-
     glViewport(0, 0, mview_width, mview_height);
+
+    auto aspect = (float)mview_width / (float)mview_height;
+
+    cout << aspect << endl;
+    glUniform1f(maspect_pos, aspect);
+    update_lines_visible();
 }
 
 void gles_render::update_model()
 {
-    esMatrixLoadIdentity(&mmodel);
-    esTranslate(&mmodel, 0, 0, mzoffsetz);
-    glUniformMatrix4fv(mmvpos, 1, GL_FALSE, (GLfloat*)mmodel.m);
-}
-
-void gles_render::update_perspective()
-{
-    // Generate a perspective matrix with a 60 degree FOV
-    esMatrixLoadIdentity(&mperspective);
-
-    auto aspect = (float)mview_width / (float)mview_height;
-    esPerspective(&mperspective, 60.0f, aspect, mnear, mfar);
-
-    glUniformMatrix4fv(mpepos, 1, GL_FALSE, (GLfloat*)mperspective.m);
+    glUniform1f(mscale_pos, mscale);
 }
 
 void gles_render::update_data(const vector<int>& liveidx)
@@ -207,7 +200,7 @@ void gles_render::update_data(const vector<int>& liveidx)
     }
 }
 
-void gles_render::draw()
+void gles_render::draw() const
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -220,7 +213,9 @@ void gles_render::draw()
     }
 
     //draw lines
-    // glVertexAttrib4f(1, 0.3, 0.3, 0.3, 1);
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mlineibo);
-    // glDrawElements(GL_LINES, sizeof(mlines) / sizeof(int), GL_UNSIGNED_INT, 0);
+    if (mshow_lines) {
+        glVertexAttrib4f(1, 0.3, 0.3, 0.3, 1);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mlineibo);
+        glDrawElements(GL_LINES, sizeof(mlines) / sizeof(int), GL_UNSIGNED_INT, 0);
+    }
 }

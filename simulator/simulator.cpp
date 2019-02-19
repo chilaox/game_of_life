@@ -7,6 +7,7 @@
 
 using namespace std;
 
+void update_view();
 void update_frame();
 EM_BOOL on_wnd_resize(int eventType, const EmscriptenUiEvent* uiEvent, void*);
 EM_BOOL on_canvas_wheel(int eventType, const EmscriptenWheelEvent* wheelEvent, void*);
@@ -22,6 +23,7 @@ void simulator::run()
     universe::instance().random(1000);
 
     gles_render::instance().init();
+    update_view();
 
     emscripten_set_resize_callback(nullptr, nullptr, false, on_wnd_resize);
     emscripten_set_wheel_callback(canvas_name, nullptr, false, on_canvas_wheel);
@@ -38,6 +40,13 @@ void update_frame()
     gles_render::instance().draw();
 }
 
+void update_view()
+{
+    int width, height;
+    emscripten_get_canvas_element_size(canvas_name, &width, &height);
+    gles_render::instance().update_view(width, height);
+}
+
 EM_BOOL on_canvas_wheel(int eventType, const EmscriptenWheelEvent* wheelEvent, void*)
 {
     cout << "mouse wheel: " << wheelEvent->deltaX << '\t' << wheelEvent->deltaY << '\t' << wheelEvent->deltaZ << '\t' << endl;
@@ -49,8 +58,7 @@ EM_BOOL on_canvas_wheel(int eventType, const EmscriptenWheelEvent* wheelEvent, v
 
 EM_BOOL on_wnd_resize(int eventType, const EmscriptenUiEvent* uiEvent, void*)
 {
-    gles_render::instance().update_view();
-
+    update_view();
     return false;
 }
 

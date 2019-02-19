@@ -9,11 +9,9 @@ public:
 
     void update_data(const std::vector<int>&);
 
-    void update_view();
+    void update_view(int width, int height);
 
-    void draw();
-
-    void oncanvesresize();
+    void draw() const;
 
     void zoom(bool isout);
     void move(int x, int y);
@@ -23,26 +21,22 @@ private:
     int mview_width = 0;
     int mview_height = 0;
 
-    float mnear = 1.0f;
-    float mfar = 100.0f;
-    float mzmax = -mnear - 0.1f;
-    float mzmin = -mfar;
-    float mzoffsetz = -mfar;
-
-    ESMatrix mperspective;
-    ESMatrix mmodel;
+    static constexpr float mmax_scale = 8;
+    static constexpr float mmin_scale = 0.125;
+    float mscale = 1;
     float mscreenoffset[2] = { 0, 0 };
+    bool mshow_lines = true;
 
-    GLint mmvpos;
-    GLint mpepos;
-    GLint moffsetpos;
+    GLint moffset_pos;
+    GLint maspect_pos;
+    GLint mscale_pos;
+
     GLuint mposvbo;
     GLuint mlineibo;
     GLuint mliveibo;
 
-    static constexpr float msidelen = 0.1f;
+    static constexpr float msidelen = 0.01f;
     static constexpr int msidenum = 1004;
-    static constexpr int mvpl = 4;
     static constexpr int mversize = 2;
     static constexpr int mstride = sizeof(float) * mversize;
     static constexpr int mposnum = (msidenum + 1) * (msidenum + 1);
@@ -53,6 +47,6 @@ private:
     int mlivenum = 0;
 
     void update_model();
-    void update_perspective();
     void update_offest();
+    void update_lines_visible();
 };
