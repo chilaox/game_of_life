@@ -82,7 +82,7 @@ EM_BOOL on_canvas_mouseup(int eventType, const EmscriptenMouseEvent* mouseEvent,
 
 EM_BOOL on_canvas_mousemove(int eventType, const EmscriptenMouseEvent* mouseEvent, void*)
 {
-    if (mouse_down) {
+    if (mouseEvent->buttons == 1) {
         auto x = mouseEvent->movementX;
         auto y = mouseEvent->movementY;
         cout << "mouse move: " << x << '\t' << y << endl;

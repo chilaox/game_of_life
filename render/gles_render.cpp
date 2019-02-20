@@ -131,15 +131,15 @@ void gles_render::init()
 
 void gles_render::update_lines_visible()
 {
-    mshow_lines = (msidelen * mview_height * mscale) > 8;
+    mshow_lines = (msidelen * mview_height * mscale) >= 6;
 }
 
 void gles_render::zoom(bool out)
 {
     if (out) {
-        mscale /= 1.1f;
+        mscale /= mstep_scale;
     } else {
-        mscale *= 1.1f;
+        mscale *= mstep_scale;
     }
 
     mscale = max(min(mscale, mmax_scale), mmin_scale);

@@ -7,7 +7,7 @@ public:
 
     void random(int);
 
-    const std::vector<int>& generation();
+    const std::vector<int>& generation(int num = 1);
 
 private:
     std::vector<int> mliveidx;

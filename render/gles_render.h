@@ -22,7 +22,8 @@ private:
     int mview_height = 0;
 
     static constexpr float mmax_scale = 8;
-    static constexpr float mmin_scale = 0.125;
+    static constexpr float mmin_scale = 1 / mmax_scale;
+    static constexpr float mstep_scale = 1.4142135623730950488016887242097;
     float mscale = 1;
     float mscreenoffset[2] = { 0, 0 };
     bool mshow_lines = true;
